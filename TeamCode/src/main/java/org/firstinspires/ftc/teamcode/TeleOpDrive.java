@@ -12,6 +12,7 @@ import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
@@ -35,7 +36,7 @@ public class TeleOpDrive extends LinearOpMode {
         DcMotorEx lr = hardwareMap.get(DcMotorEx.class, "lr"); // back left
         DcMotorEx intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
         DcMotorEx outtakeMotor = hardwareMap.get(DcMotorEx.class, "outtakeMotor");
-        CRServo rollers = hardwareMap.get(CRServo.class, "rollers");
+        //CRServo rollers = hardwareMap.get(CRServo.class, "rollers");
 
         double outtakeMotorPower = 0;
         double outtakeTimeMarker = 0;
@@ -79,6 +80,7 @@ public class TeleOpDrive extends LinearOpMode {
         while (opModeIsActive()) {
 
             // Rollers finite state machine
+            /**
             if (gamepad1.y){
                 rollers.setPower(0.5);
             }
@@ -88,23 +90,28 @@ public class TeleOpDrive extends LinearOpMode {
             else {
                 rollers.setPower(0);
             }
-
-
+             **/
 
             // Intake Motor finite state machine with toggleable buttons
-            if (gamepad1.dpad_up && !intoutButtonState && e.seconds() - intakeTimeMarker > 0.33) {
-                intakeMotor.setPower(0.67);
+            if (gamepad1.dpad_up && !intoutButtonState && e.seconds() - intakeTimeMarker > 0.5) {
+                intakeMotor.setPower(0.8);
                 intoutButtonState = true;
                 intinButtonState = false;
                 intakeTimeMarker = e.seconds();
             }
-            else if (gamepad1.dpad_down && !intinButtonState && e.seconds() - intakeTimeMarker > 0.33) {
-                intakeMotor.setPower(-0.67);
+            else if (gamepad1.dpad_down && !intinButtonState && e.seconds() - intakeTimeMarker > 0.5) {
+                intakeMotor.setPower(-0.8);
                 intinButtonState = true;
                 intoutButtonState = false;
                 intakeTimeMarker = e.seconds();
             }
-            else if ((gamepad1.dpad_down && intinButtonState) || (gamepad1.dpad_up && intoutButtonState) && e.seconds() - intakeTimeMarker > 0.3) {
+            else if ((gamepad1.dpad_down && intinButtonState) && e.seconds() - intakeTimeMarker > 0.5) {
+                intakeMotor.setPower(0);
+                intinButtonState = false;
+                intoutButtonState = false;
+                intakeTimeMarker = e.seconds();
+            }
+            else if ((gamepad1.dpad_up && intoutButtonState) && e.seconds() - intakeTimeMarker > 0.5) {
                 intakeMotor.setPower(0);
                 intinButtonState = false;
                 intoutButtonState = false;
@@ -165,6 +172,7 @@ public class TeleOpDrive extends LinearOpMode {
 
             telemetryAprilTag();
             telemetry.addLine("Outtake Motor Power: " + outtakeMotorPower * 100 + "%");
+            telemetry.addData("Outtake Motor Current", outtakeMotor.getCurrent(CurrentUnit.AMPS));
             telemetry.update();
 
             // Save CPU resources; can resume streaming when needed
@@ -175,9 +183,6 @@ public class TeleOpDrive extends LinearOpMode {
                   visionPortal.resumeStreaming();
             }
              **/
-
-            // Share the CPU
-            sleep(20);
         }
 
         visionPortal.close();
