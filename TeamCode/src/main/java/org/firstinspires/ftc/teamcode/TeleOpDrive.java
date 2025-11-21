@@ -1,13 +1,15 @@
 package org.firstinspires.ftc.teamcode;
 
 
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.vision.VisionPortal;
@@ -18,12 +20,12 @@ import java.util.List;
 @TeleOp
 public class TeleOpDrive extends LinearOpMode {
 
-   // private AprilTagProcessor aprilTag;
-   // private VisionPortal visionPortal;
+   private AprilTagProcessor aprilTag;
+   private VisionPortal visionPortal;
+   private static ElapsedTime e = new ElapsedTime();
 
     @Override
-    public void
-    runOpMode() throws InterruptedException {
+    public void runOpMode() throws InterruptedException {
 
         // Declare our motors
         // Make sure your ID's match your configuration
@@ -31,74 +33,113 @@ public class TeleOpDrive extends LinearOpMode {
         DcMotorEx rr = hardwareMap.get(DcMotorEx.class, "rr"); // back right
         DcMotorEx lf = hardwareMap.get(DcMotorEx.class, "lf"); // front left
         DcMotorEx lr = hardwareMap.get(DcMotorEx.class, "lr"); // back left
-        //DcMotorEx intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
+        DcMotorEx intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
+        DcMotorEx outtakeMotor = hardwareMap.get(DcMotorEx.class, "outtakeMotor");
+        CRServo rollers = hardwareMap.get(CRServo.class, "rollers");
+
+        double outtakeMotorPower = 0;
+        double outtakeTimeMarker = 0;
+        double intakeTimeMarker = 0;
+
+        boolean intoutButtonState = false;
+        boolean intinButtonState = false;
 
         // Reverse the right side motors. This may be wrong for your setup.
         // If your robot moves backwards when commanded to go forwards,
         // reverse the left side instead.
         // See the note about this earlier on this page.
 
+        // Correct motor directions
         lf.setDirection(DcMotorSimple.Direction.REVERSE);
         lr.setDirection(DcMotorSimple.Direction.REVERSE);
         rf.setDirection(DcMotorSimple.Direction.FORWARD);
         rr.setDirection(DcMotorSimple.Direction.FORWARD);
 
-        //intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        outtakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-      //  initAprilTag();
+        initAprilTag();
 
-        // Wait for the DS start button to be touched.
-        telemetry.addData("DS preview on/off", "3 dots, Camera Stream");
-        telemetry.addData(">", "Touch START to start OpMode");
-        telemetry.update();
-
-        // Retrieve the IMU from the hardware map
         IMU imu = hardwareMap.get(IMU.class, "imu");
         // Adjust the orientation parameters to match your robot
         // Without this, the REV Hub's orientation is assumed to be logo up / USB forward
         imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(
-                RevHubOrientationOnRobot.LogoFacingDirection.BACKWARD,
+                RevHubOrientationOnRobot.LogoFacingDirection.LEFT,
                 RevHubOrientationOnRobot.UsbFacingDirection.UP)));
         imu.resetYaw();
+
+        // Wait for the DS start button to be touched.
+        telemetry.addLine("TeleOp Ready");
+        telemetry.update();
 
         waitForStart();
 
         if (isStopRequested()) return;
 
         while (opModeIsActive()) {
-            /**
-            if (gamepad1.left_bumper) {
-                intakeMotor.setPower(1);
+
+            // Rollers finite state machine
+            if (gamepad1.y){
+                rollers.setPower(0.5);
             }
-            else if (gamepad1.right_bumper) {
-                intakeMotor.setPower(-1);
-            }
-            else if (gamepad1.dpad_up) {
-                intakeMotor.setPower(0.67);
-            }
-            else if (gamepad1.dpad_down) {
-                intakeMotor.setPower(-0.67);
+            else if (gamepad1.a) {
+                rollers.setPower(-0.5);
             }
             else {
-                intakeMotor.setPower(0);
+                rollers.setPower(0);
             }
-             **/
 
 
 
+            // Intake Motor finite state machine with toggleable buttons
+            if (gamepad1.dpad_up && !intoutButtonState && e.seconds() - intakeTimeMarker > 0.33) {
+                intakeMotor.setPower(0.67);
+                intoutButtonState = true;
+                intinButtonState = false;
+                intakeTimeMarker = e.seconds();
+            }
+            else if (gamepad1.dpad_down && !intinButtonState && e.seconds() - intakeTimeMarker > 0.33) {
+                intakeMotor.setPower(-0.67);
+                intinButtonState = true;
+                intoutButtonState = false;
+                intakeTimeMarker = e.seconds();
+            }
+            else if ((gamepad1.dpad_down && intinButtonState) || (gamepad1.dpad_up && intoutButtonState) && e.seconds() - intakeTimeMarker > 0.3) {
+                intakeMotor.setPower(0);
+                intinButtonState = false;
+                intoutButtonState = false;
+                intakeTimeMarker = e.seconds();
+            }
+
+            // Outtake Motor finite state machine with gradual acceleration
+            outtakeMotor.setPower(outtakeMotorPower);
+            if (gamepad1.left_bumper && outtakeMotorPower < 1.0 && e.seconds() - outtakeTimeMarker > 0.25) {
+                outtakeMotorPower += 0.1;
+                outtakeTimeMarker = e.seconds();
+            }
+            else if (gamepad1.right_bumper && outtakeMotorPower > -1.0 && e.seconds() - outtakeTimeMarker > 0.25) {
+                outtakeMotorPower -= 0.1;
+                outtakeTimeMarker = e.seconds();
+            }
+            else if (gamepad1.x) {
+                outtakeMotorPower = 0;
+            }
+
+            // Take controller inputs
             double y = -gamepad1.left_stick_y * 0.75; // Remember, Y stick value is reversed
             double x = gamepad1.left_stick_x * 0.75;
             double rx = gamepad1.right_stick_x * 0.75;
 
-            // This button choice was made so that it is hard to hit on accident,
+            // Reset Yaw
+            // This button choice was made so that it is hard to hit on accident
             // it can be freely changed based on preference.
             // The equivalent button is start on Xbox-style controllers.
             if (gamepad1.back) {
                 imu.resetYaw();
-                telemetry.addData("Yaw ", "reset");
-                telemetry.update();
+                telemetry.addLine("Yaw reset");
             }
 
+            // Take Yaw reading
             double botHeading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
 
             // Rotate the movement direction counter to the bot's rotation
@@ -107,7 +148,7 @@ public class TeleOpDrive extends LinearOpMode {
 
             rotX = rotX * 1.1;  // Counteract imperfect strafing
 
-            // Denominator is the largest motor power (absolute value) or 1
+            // Denominator is the largest motor power (absolute va lue) or 1
             // This ensures all the powers maintain the same ratio,
             // but only if at least one is out of the range [-1, 1]
             double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(rx), 1);
@@ -116,41 +157,38 @@ public class TeleOpDrive extends LinearOpMode {
             double frontRightPower = (rotY - rotX - rx) / denominator;
             double backRightPower = (rotY + rotX - rx) / denominator;
 
+            // Set motor power based on above calculations
+            lf.setPower(frontLeftPower);
+            lr.setPower(backLeftPower);
+            rf.setPower(frontRightPower);
+            rr.setPower(backRightPower);
 
-            rf.setPower(frontLeftPower);
-            rr.setPower(backLeftPower);
-            lf.setPower(frontRightPower);
-            lr.setPower(backRightPower);
+            telemetryAprilTag();
+            telemetry.addLine("Outtake Motor Power: " + outtakeMotorPower * 100 + "%");
+            telemetry.update();
 
-
-        //    telemetryAprilTag();
-
-            // Push telemetry to the Driver Station.
-        //    telemetry.update();
-
-            // Save CPU resources; can resume streaming when needed.
-
+            // Save CPU resources; can resume streaming when needed
+            /**
             if (gamepad1.dpad_down) {
-            //    visionPortal.stopStreaming();
+                  visionPortal.stopStreaming();
             } else if (gamepad1.dpad_up) {
-             //   visionPortal.resumeStreaming();
+                  visionPortal.resumeStreaming();
             }
+             **/
 
-
-            // Share the CPU.
+            // Share the CPU
             sleep(20);
         }
 
-        //visionPortal.close();
+        visionPortal.close();
     }
 
     /**
      * Initialize the AprilTag processor.
-
+    **/
     private void initAprilTag() {
          // Create the AprilTag processor.
          aprilTag = new AprilTagProcessor.Builder()
-
                  // The following default settings are available to un-comment and edit as needed.
                  //.setDrawAxes(false)
                  //.setDrawCubeProjection(false)
@@ -203,13 +241,11 @@ public class TeleOpDrive extends LinearOpMode {
 
          // Disable or re-enable the aprilTag processor at any time.
          //visionPortal.setProcessorEnabled(aprilTag, true);
-
-    }   // end method initAprilTag()
-    **/
+    }
 
      /**
       * Add telemetry about AprilTag detections.
-
+    **/
     private void telemetryAprilTag() {
         List<AprilTagDetection> currentDetections = aprilTag.getDetections();
         telemetry.addData("# AprilTags Detected", currentDetections.size());
@@ -233,9 +269,5 @@ public class TeleOpDrive extends LinearOpMode {
         telemetry.addLine("PRY = Pitch, Roll & Yaw (XYZ Rotation)");
         telemetry.addLine("RBE = Range, Bearing & Elevation");
 
-    }   // end method telemetryAprilTag()
-
-      **/
+    }
 }
-
-
