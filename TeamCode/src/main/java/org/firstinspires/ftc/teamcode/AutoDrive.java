@@ -68,7 +68,9 @@ public class AutoDrive extends LinearOpMode {
 
         if (isStopRequested()) return;
 
-
+        for (int i = 0; i < 4; i++) driveTrain[i].setPower(0.67);
+        sleepy(0.5);
+        for (int i = 0; i < 4; i++) driveTrain[i].setPower(0);
     }
 
     // A homemade sleep method because the regular one is fucked
