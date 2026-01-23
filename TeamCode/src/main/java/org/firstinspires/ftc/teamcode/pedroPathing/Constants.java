@@ -1,9 +1,12 @@
 package org.firstinspires.ftc.teamcode.pedroPathing;
 
+import com.pedropathing.control.FilteredPIDFCoefficients;
+import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.FollowerBuilder;
 import com.pedropathing.ftc.drivetrains.MecanumConstants;
+import com.pedropathing.ftc.localization.Encoder;
 import com.pedropathing.ftc.localization.constants.TwoWheelConstants;
 import com.pedropathing.paths.PathConstraints;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
@@ -12,9 +15,16 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .mass(9.2); // Change
+            .mass(10.118)
+            .forwardZeroPowerAcceleration(-33.161346995)
+            .lateralZeroPowerAcceleration(-68.515847)
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.038, 0, 0.0024, 0.024))
+            .headingPIDFCoefficients(new PIDFCoefficients(0.46, 0, 0.032, 0.03))
+            .drivePIDFCoefficients((new FilteredPIDFCoefficients(0,0,0,0.0,0.04)));
 
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
+
+
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1.35 , 1);
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerConstants, hardwareMap)
@@ -26,20 +36,26 @@ public class Constants {
 
     public static MecanumConstants driveConstants = new MecanumConstants()
             .maxPower(1)
-            .rightFrontMotorName("fr")
+            .rightFrontMotorName("rf")
             .rightRearMotorName("rr")
             .leftRearMotorName("lr")
             .leftFrontMotorName("lf")
             .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
             .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
             .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
-            .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD);
+            .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
+            .xVelocity(65.4457888458)
+            .yVelocity(55.06827);
 
     public static TwoWheelConstants localizerConstants = new TwoWheelConstants()
             .forwardEncoder_HardwareMapName("forwardEncoder")
             .strafeEncoder_HardwareMapName("strafeEncoder")
-            .forwardPodY(-6.063) // Change
-            .strafePodX(-0.219) // Change
+            .forwardPodY(-6.063)
+            .strafePodX(-0.219)
+            .forwardEncoderDirection(Encoder.FORWARD)
+            .strafeEncoderDirection(Encoder.REVERSE)
+            .forwardTicksToInches(0.001999)
+            .strafeTicksToInches(0.00199633)
             .IMU_HardwareMapName("imu")
             .IMU_Orientation(
                     new RevHubOrientationOnRobot(
