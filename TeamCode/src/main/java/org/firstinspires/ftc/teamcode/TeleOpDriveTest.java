@@ -17,10 +17,9 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import java.util.List;
 import com.pedropathing.follower.Follower;
-import com.bylazar.configurables.annotations.Configurable;
 
 @TeleOp
-public class TeleOpDriveVelocity extends LinearOpMode   {
+public class TeleOpDriveTest extends LinearOpMode   {
 
    private AprilTagProcessor aprilTag;
    private VisionPortal visionPortal;
@@ -95,7 +94,7 @@ public class TeleOpDriveVelocity extends LinearOpMode   {
                 }
                 else {
                     transferOn = true;
-                    transfer.setPower(0.75);
+                    transfer.setPower(0.25);
                     intakeMotor.setPower(0.75);
                 }
                 transTimeMarker = e.seconds();
@@ -250,8 +249,8 @@ public class TeleOpDriveVelocity extends LinearOpMode   {
     }
 
     private double inputAcceleration(double input) {
-        if (input < 0) return -0.85 * Math.pow(-input, 1.8) - 0.15;
-        else if (input > 0) return 0.85 * Math.pow(input, 1.8) + 0.15;
+        if (input < 0) return -0.9 * Math.pow(-input, 1.7) - 0.1;
+        else if (input > 0) return 0.9 * Math.pow(input, 1.7) + 0.1;
         return 0;
     }
 }
