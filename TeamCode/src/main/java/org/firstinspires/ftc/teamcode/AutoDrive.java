@@ -8,13 +8,6 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.vision.VisionPortal;
-import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
-import java.util.ArrayList;
-import java.util.List;
 
 
 @Autonomous
@@ -69,7 +62,7 @@ public class AutoDrive extends LinearOpMode {
         if (isStopRequested()) return;
 
         for (int i = 0; i < 4; i++) driveTrain[i].setPower(0.67);
-        sleepy(0.5);
+        sleepy(0.35);
         for (int i = 0; i < 4; i++) driveTrain[i].setPower(0);
     }
 

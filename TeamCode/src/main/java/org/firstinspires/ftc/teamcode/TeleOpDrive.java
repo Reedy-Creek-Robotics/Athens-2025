@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -14,6 +13,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
+
+import java.util.Arrays;
 import java.util.List;
 
 @TeleOp
@@ -22,8 +23,12 @@ public class TeleOpDrive extends LinearOpMode   {
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
     private static ElapsedTime e = new ElapsedTime();
+
+    final private List<String> ready = Arrays.asList("Ready?", "Let's Go!", "準備完了!", "Look behind you.", "YIPPIE!!!", "It's Tiiime!", "In position", "Locked and loaded", "pwease pwess me >-<", "PLEASE NOTICE MEEE", "Ready to go!", "Yeehaw!");
     final double targetToTagDist = 15; // *Perpendicular* distance between a sensed AprilTag and the target point
     final double camToCenterDist = 9.7; // *Perpendicular* distance between the camera and the robot's center of rotation
+
+    private static double[] centerToTargetVector = new double[2];
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -35,7 +40,6 @@ public class TeleOpDrive extends LinearOpMode   {
         DcMotorEx lr = hardwareMap.get(DcMotorEx.class, "lr"); // back left
         DcMotorEx intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
         DcMotorEx outtakeMotor = hardwareMap.get(DcMotorEx.class, "outtakeMotor");
-        CRServo transfer = hardwareMap.get(CRServo.class, "transfer");
 
         // Variables for outtake finite state machine
         double outtakeMotorVelo = 0;
@@ -50,6 +54,12 @@ public class TeleOpDrive extends LinearOpMode   {
         boolean intinOn = false; // intake is outtaking
         double intakeTimeMarker = 0; // time since last input
 
+        boolean fixItPlease = false;
+        double fixItMarker = -0.2;
+
+        boolean lockEndReady = false; // Bot locked onto target heading
+        String currentFunny = "";
+
         // Reverse the right side motors. This may be wrong for setup.
         // If robot moves backwards when commanded to go forwards, reverse the left side instead.
         // See the note about this earlier on this page.
@@ -57,8 +67,6 @@ public class TeleOpDrive extends LinearOpMode   {
         // Correct motor directions
         lf.setDirection(DcMotorSimple.Direction.REVERSE);
         lr.setDirection(DcMotorSimple.Direction.REVERSE);
-        rf.setDirection(DcMotorSimple.Direction.FORWARD);
-        rr.setDirection(DcMotorSimple.Direction.FORWARD);
         outtakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // Set zero power braking behavior for motors
@@ -95,24 +103,22 @@ public class TeleOpDrive extends LinearOpMode   {
             if (gamepad1.y && e.seconds() - transTimeMarker > 0.35) {
                 // stop transfer
                 if (transferOn) {
-                    transfer.setPower(0);
                     transferOn = false;
                     intakeMotor.setPower(0);
                 }
                 // activate transfer
                 else {
                     transferOn = true;
-                    transfer.setPower(0.25);
-                    intakeMotor.setPower(0.75);
+                    intakeMotor.setPower(0.4);
                 }
                 transTimeMarker = e.seconds();
             }
 
             // Intake finite state machine with toggleable buttons and press delay
-            if (gamepad1.dpad_up && e.seconds() - intakeTimeMarker > 0.35) {
+            if (gamepad1.dpad_up && e.seconds() - intakeTimeMarker > 0.3) {
                 // outtake with intake
                 if (!intoutOn) {
-                    intakeMotor.setPower(-0.8);
+                    intakeMotor.setPower(-0.67);
                     intoutOn = true;
                     intinOn = false;
                 }
@@ -123,7 +129,7 @@ public class TeleOpDrive extends LinearOpMode   {
                 }
                 intakeTimeMarker = e.seconds();
             }
-            else if (gamepad1.dpad_down && e.seconds() - intakeTimeMarker > 0.35) {
+            else if (gamepad1.dpad_down && e.seconds() - intakeTimeMarker > 0.3) {
                 // intake with intake
                 if (!intinOn) {
                     intakeMotor.setPower(0.8);
@@ -136,6 +142,13 @@ public class TeleOpDrive extends LinearOpMode   {
                     intinOn = false;
                 }
                 intakeTimeMarker = e.seconds();
+            }
+            else if (gamepad1.dpad_left) {
+                intakeMotor.setPower(-0.67);
+                outtakeMotorVelo = -270;
+                outtakeMotor.setPower(outtakeMotorVelo);
+                fixItMarker = e.seconds();
+                fixItPlease = true;
             }
 
             // Outtake Motor finite state machine with gradual acceleration and press delay
@@ -156,8 +169,18 @@ public class TeleOpDrive extends LinearOpMode   {
                 outtakeMotorVelo = 0;
                 transferOn = false;
                 intakeMotor.setPower(0);
-                transfer.setPower(0);
                 outtakeMotor.setVelocity(outtakeMotorVelo, AngleUnit.DEGREES);
+            }
+            else if (gamepad1.a) {
+                outtakeMotorVelo = -0.00315195 * Math.pow(centerToTargetVector[0], 2) + 1.66973 * centerToTargetVector[0] + 67.03349;
+                outtakeMotor.setVelocity(outtakeMotorVelo, AngleUnit.DEGREES);
+            }
+
+            if (fixItPlease && e.seconds() - fixItMarker > 0.15) {
+                intakeMotor.setPower(0);
+                outtakeMotorVelo = 75;
+                outtakeMotor.setVelocity(75);
+                fixItPlease = false;
             }
 
             // Take controller inputs
@@ -178,10 +201,20 @@ public class TeleOpDrive extends LinearOpMode   {
             rf.setPower(frontRightPower);
             rr.setPower(backRightPower);
 
-            // Send AprilTag and flywheel motor data to telemetry
             telemetryAprilTag();
+
+            if (centerToTargetVector[1] < 1) {
+                telemetry.addLine(currentFunny + "\n");
+                lockEndReady = true;
+            }
+            else if (lockEndReady) {
+                currentFunny = ready.get((int) (Math.random() * 12));
+                lockEndReady = false;
+            }
+
+            // Send flywheel motor data to telemetry
             telemetry.addLine("Applied Outtake Velo: " + outtakeMotorVelo + " deg/s");
-            telemetry.addLine("Current Outtake Velo" + outtakeMotor.getVelocity(AngleUnit.DEGREES) + " deg/s");
+            telemetry.addLine("Current Outtake Velo" + outtakeMotor.getVelocity()/28 + " RPM");
             telemetry.update();
         } // End of TeleOp gameplay loop
 
@@ -221,53 +254,48 @@ public class TeleOpDrive extends LinearOpMode   {
      **/
     private void telemetryAprilTag() {
         List<AprilTagDetection> currentDetections = aprilTag.getDetections();
-        telemetry.addData("# AprilTags Detected", currentDetections.size());
+        telemetry.addLine(String.format("%d AprilTags Detected", currentDetections.size()));
 
         // Step through the list of detections and display info for each one.
         for (AprilTagDetection detection : currentDetections) {
             if (detection.metadata != null) {
-                telemetry.addLine(String.format("\n==== (ID %d) %s", detection.id, detection.metadata.name));
-                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
-                telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
+                telemetry.addLine(String.format("\n==== (ID %d) %s\n", detection.id, detection.metadata.name));
 
                 // telemetry to locate target behind goal AprilTags
                 if (detection.id == 20 || detection.id == 24) {
-                    // line between target and AprilTag + continuation of line between target and AprilTag as line between AprilTag and intersection of with triSideB
-                    double triSideA = targetToTagDist + Math.abs(detection.ftcPose.x) / Math.abs(Math.cos(Math.toRadians(detection.ftcPose.yaw)));
+                    double bearingRads = Math.toRadians(detection.ftcPose.bearing);
+                    double yawRads = Math.toRadians(detection.ftcPose.yaw);
 
-                    // line between robot axis of rotation and camera + y distance reading + continuation of y distance reading as line between vertex of x and y distance reading and intersection with triSideA
-                    double triSideB = camToCenterDist + detection.ftcPose.y + Math.abs(detection.ftcPose.x) * Math.abs(Math.tan(Math.toRadians(detection.ftcPose.yaw)));
+                    double centerToTargetX = detection.ftcPose.range * Math.cos(bearingRads) + targetToTagDist * Math.cos(yawRads) + camToCenterDist;
+                    double centerToTargetY = detection.ftcPose.range * Math.sin(bearingRads) + targetToTagDist * Math.sin(yawRads);
 
-                    // Angle between triSide A and triSideB
-                    double triAngleC = Math.toRadians(90 - detection.ftcPose.yaw);
+                    centerToTargetVector[0] = ((int) (Math.sqrt(centerToTargetX * centerToTargetX + centerToTargetY * centerToTargetY) * 100)) / 100.0; // Center to Target Range (In)
+                    centerToTargetVector[1] = ((int) (Math.toDegrees(Math.atan(centerToTargetY / centerToTargetX) * 100))) / 100.0; // Center to Target Bearing
 
-                    // Triangle Side C, in geometrical context
-                    double centerToTargetRange = Math.sqrt(triSideA*triSideA + triSideB*triSideB - 2 * triSideA * triSideB * Math.cos(triAngleC));
-
-                    // Triangle Angle A, in geometrical context
-                    double centerToTargetBearing = Math.toDegrees(Math.asin(triSideA * Math.sin(triAngleC) / centerToTargetRange));
-
-                    telemetry.addLine("Target Distance: " + centerToTargetRange + " inch");
-                    telemetry.addLine("Target Heading Diff: " + centerToTargetBearing + " deg");
+                    telemetry.addLine(String.format("\nHeading diff from target: %.2f deg", centerToTargetVector[1]));
+                    telemetry.addLine(String.format("Distance from target: %.2f in\n", centerToTargetVector[0]));
+                }
+                else {
+                    centerToTargetVector[1] = 180;
+                    centerToTargetVector[0] = 0;
                 }
             }
             else {
                 telemetry.addLine(String.format("\n==== (ID %d) Unknown", detection.id));
-                telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", detection.center.x, detection.center.y));
+                telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)\n", detection.center.x, detection.center.y));
+                centerToTargetVector[1] = 180;
+                centerToTargetVector[0] = 0;
             }
         }   // end for() loop
-
-        // Add "key" information to telemetry
-        telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
-        telemetry.addLine("PRY = Pitch, Roll & Yaw (XYZ Rotation)");
     }
+
 
     /**
      * Input acceleration for drivetrain inputs based on parabolic curve
      */
     private double inputAcceleration(double input) {
-        if (input < 0) return -0.91 * Math.pow(-input, 1.7) - 0.09;
-        else if (input > 0) return 0.91 * Math.pow(input, 1.7) + 0.09;
+        if (input < 0) return -0.91 * Math.pow(-input, 1.8) - 0.09;
+        else if (input > 0) return 0.91 * Math.pow(input, 1.8) + 0.09;
         return 0;
     }
 }
