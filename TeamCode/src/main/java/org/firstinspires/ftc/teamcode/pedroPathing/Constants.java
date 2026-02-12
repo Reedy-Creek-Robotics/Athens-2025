@@ -15,16 +15,17 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class Constants {
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .mass(10.118)
-            .forwardZeroPowerAcceleration(-33.161346995)
-            .lateralZeroPowerAcceleration(-68.515847)
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.038, 0, 0.0024, 0.024))
-            .headingPIDFCoefficients(new PIDFCoefficients(0.46, 0, 0.032, 0.03))
-            .drivePIDFCoefficients((new FilteredPIDFCoefficients(0,0,0,0.0,0.04)));
+            .mass(10.15)
+            .forwardZeroPowerAcceleration(-33.161346995) // done
+            .lateralZeroPowerAcceleration(-68.515847) // done
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.04, 0.0001, 0.0024, 0.02)) // done
+            .headingPIDFCoefficients(new PIDFCoefficients(0.48, 0.00, 0.012, 0.033)) // done
+            .drivePIDFCoefficients((new FilteredPIDFCoefficients(0.042,0.0001,0.0011,0.6,0.038)))
+            .centripetalScaling(0.00053);
 
 
 
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1.35 , 1);
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1.38 , 1);
 
     public static Follower createFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerConstants, hardwareMap)
@@ -50,8 +51,8 @@ public class Constants {
     public static TwoWheelConstants localizerConstants = new TwoWheelConstants()
             .forwardEncoder_HardwareMapName("forwardEncoder")
             .strafeEncoder_HardwareMapName("strafeEncoder")
-            .forwardPodY(-6.063)
-            .strafePodX(-0.219)
+            .forwardPodY(6.125)
+            .strafePodX(-0.4375)
             .forwardEncoderDirection(Encoder.FORWARD)
             .strafeEncoderDirection(Encoder.REVERSE)
             .forwardTicksToInches(0.001999)

@@ -824,6 +824,7 @@ class HeadingTuner extends OpMode {
         forwards.setConstantHeadingInterpolation(0);
         backwards = new Path(new BezierLine(new Pose(DISTANCE,0), new Pose(0,0)));
         backwards.setConstantHeadingInterpolation(0);
+
         follower.followPath(forwards);
     }
 
@@ -1186,7 +1187,7 @@ class Circle extends OpMode {
  * @version 1.1, 5/19/2025
  */
 class Drawing {
-    public static final double ROBOT_RADIUS = 9; // woah
+    public static final double ROBOT_RADIUS = 8.75; // woah
     private static final FieldManager panelsField = PanelsField.INSTANCE.getField();
     private static final Style robotLook = new Style(
             "", "#3F51B5", 0.0
