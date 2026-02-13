@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.pedropathing.control.PIDFCoefficients;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -25,7 +26,7 @@ public class TeleOpDrive extends LinearOpMode   {
     private VisionPortal visionPortal; // Camera
     private static ElapsedTime e = new ElapsedTime();
     private double currentTime = 0; // Time since TeleOp start
-    final double targetToTagDist = 9; // *Perpendicular* distance between AprilTag and the target point
+    final double targetToTagDist = 10; // *Perpendicular* distance between AprilTag and the target point
     final double camToCenterDist = 5.25; // *Perpendicular* distance between the camera and the robot's center of rotation
     private Follower follower; // PedroPathing follower
     private static double[] centerToTargetVector = new double[2]; // 0th index stores range from robot center to target, 1st index stores bearing from robot center to target
@@ -34,14 +35,10 @@ public class TeleOpDrive extends LinearOpMode   {
     public void runOpMode() throws InterruptedException {
 
         // Declare motors
-        DcMotorEx rf = hardwareMap.get(DcMotorEx.class, "rf"); // front right
-        DcMotorEx rr = hardwareMap.get(DcMotorEx.class, "rr"); // back right
-        DcMotorEx lf = hardwareMap.get(DcMotorEx.class, "lf"); // front left
-        DcMotorEx lr = hardwareMap.get(DcMotorEx.class, "lr"); // back left
         DcMotorEx intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
         DcMotorEx outtakeMotor = hardwareMap.get(DcMotorEx.class, "outtakeMotor");
 
-        // Initialize follower
+        // Initialize PedroPathing follower
         follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(new Pose());
         follower.update();
@@ -63,12 +60,9 @@ public class TeleOpDrive extends LinearOpMode   {
         double automationMarker = 0; // time since last input
 
         // Correct motor directions
-        lf.setDirection(DcMotorSimple.Direction.REVERSE);
-        lr.setDirection(DcMotorSimple.Direction.REVERSE);
         outtakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // Set zero power braking behavior for motors
-        intakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         outtakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Set outtake motor velocity PIDF coefficients
@@ -86,35 +80,21 @@ public class TeleOpDrive extends LinearOpMode   {
         if (isStopRequested()) return;
 
         // start TeleOp with manual drive
-        follower.startTeleopDrive();
+        follower.startTeleopDrive(false);
 
         //Start TeleOp gameplay loop
         while (opModeIsActive()) {
 
             // update per-loop variables
-            follower.update();
             currentTime = e.seconds();
 
             // manual drive input processing
-            if (!automatedDrive) {
-                // Take controller inputs
-                double y = -inputAcceleration(gamepad1.left_stick_y); // Remember, Y stick value is reversed
-                double x = inputAcceleration(gamepad1.left_stick_x);
-                double rx = inputAcceleration(gamepad1.right_stick_x) * 0.8;
-
-                // Calculate motor powers for bot-relative drive
-                double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
-                double frontLeftPower = (y + x + rx) / denominator;
-                double backLeftPower = (y - x + rx) / denominator;
-                double frontRightPower = (y - x - rx) / denominator;
-                double backRightPower = (y + x - rx) / denominator;
-
-                // Set motor power based on above calculations
-                lf.setPower(frontLeftPower);
-                lr.setPower(backLeftPower);
-                rf.setPower(frontRightPower);
-                rr.setPower(backRightPower);
-            }
+            if (!automatedDrive) follower.setTeleOpDrive(
+                        -inputAcceleration(gamepad1.left_stick_y),
+                        -inputAcceleration(gamepad1.left_stick_x),
+                        -inputAcceleration(gamepad1.right_stick_x) * 0.8,
+                        true
+            );
 
             // Intake finite state machine
             if (gamepad1.dpad_up && currentTime - intakeMarker > 0.25) {
@@ -124,7 +104,7 @@ public class TeleOpDrive extends LinearOpMode   {
                 intakeMarker = currentTime;
             } // reverse intake
             else if (gamepad1.dpad_down && currentTime - intakeMarker > 0.25) {
-                intakePower = intakePower == 0.67 ? 0 : 0.67;
+                intakePower = intakePower == 0.75 ? 0 : 0.75;
                 intakeMotor.setPower(intakePower);
 
                 intakeMarker = currentTime;
@@ -150,20 +130,20 @@ public class TeleOpDrive extends LinearOpMode   {
                 outtakeMarker = currentTime;
             } // bump up outtake velocity
             else if (gamepad1.a && currentTime - automationMarker > 0.25) {
-                if (!automatedDrive) {
-                    follower.setStartingPose(new Pose(0,0,0));
-                    follower.holdPoint(new Pose(0,0,Math.toRadians(centerToTargetVector[1])));
+                if (!automatedDrive && centerToTargetVector[1] < 180) {
+                    Pose currentPose = follower.getPose();
+                    follower.holdPoint(new Pose(currentPose.getX(), currentPose.getPose().getY(), currentPose.getHeading() + Math.toRadians(centerToTargetVector[1])));
+                    follower.update();
+
+                    outtakeVelo = -0.003152 * Math.pow(centerToTargetVector[0], 2) + 1.67 * centerToTargetVector[0] + 69;
+                    outtakeMotor.setVelocity(outtakeVelo, AngleUnit.DEGREES);
 
                     automatedDrive = true;
                 }
                 else {
                     follower.startTeleOpDrive();
-
                     automatedDrive = false;
                 }
-
-                outtakeVelo = -0.003152 * Math.pow(centerToTargetVector[0], 2) + 1.67 * centerToTargetVector[0] + 69;
-                outtakeMotor.setVelocity(outtakeVelo, AngleUnit.DEGREES);
 
                 automationMarker = currentTime;
 
@@ -183,16 +163,16 @@ public class TeleOpDrive extends LinearOpMode   {
 
             // Unjamming system
             if (gamepad1.b) {
-                intakePower = -0.2;
+                intakePower = -0.5;
                 intakeMotor.setPower(intakePower);
 
-                outtakeVelo = -200;
-                outtakeMotor.setPower(outtakeVelo);
+                outtakeVelo = -1000;
+                outtakeMotor.setVelocity(-500, AngleUnit.DEGREES);
 
                 unstuckOn = true;
                 unstuckMarker = currentTime;
             } // start unjamming system
-            if (unstuckOn && currentTime - unstuckMarker > 0.15) {
+            if (unstuckOn && currentTime - unstuckMarker > 0.2) {
                 intakePower = 0;
                 intakeMotor.setPower(intakePower);
 
@@ -254,7 +234,7 @@ public class TeleOpDrive extends LinearOpMode   {
                 // telemetry to locate target behind goal AprilTags
                 if (detection.id == 20 || detection.id == 24) {
                     double bearingRads = Math.toRadians(detection.ftcPose.bearing);
-                    double yawRads = Math.toRadians(detection.ftcPose.yaw);
+                    double yawRads = Math.toRadians(detection.ftcPose.yaw + (detection.id == 20 ? -10 : 10));
 
                     double centerToTargetX = detection.ftcPose.range * Math.cos(bearingRads) + targetToTagDist * Math.cos(yawRads) + camToCenterDist;
                     double centerToTargetY = detection.ftcPose.range * Math.sin(bearingRads) + targetToTagDist * Math.sin(yawRads);
@@ -288,7 +268,6 @@ public class TeleOpDrive extends LinearOpMode   {
             }
         }   // end for() loop
     }
-
 
     /**
      * Input acceleration for drivetrain inputs based on parabolic curve

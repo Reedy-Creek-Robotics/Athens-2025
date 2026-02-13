@@ -1,14 +1,14 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.util.ElapsedTime;
-
+import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.BezierLine;
+import com.pedropathing.geometry.Pose;
+import com.pedropathing.paths.Path;
+import com.pedropathing.paths.PathChain;
+import com.pedropathing.util.Timer;
 
 @Autonomous
 public class AutoRedFar extends LinearOpMode {
@@ -16,43 +16,10 @@ public class AutoRedFar extends LinearOpMode {
     // Initialize program-wide elapsed time
     private static final ElapsedTime e = new ElapsedTime();
 
-    // Declare program-wide IMU
-    private static IMU imu;
-
-    // Initialize drivetrain motor array
-    private static DcMotorEx[] driveTrain = new DcMotorEx[4];
+    private Follower follower;
 
     @Override
     public void runOpMode() throws InterruptedException {
-
-        // Retrieve and initialize drivetrain motors from hardware map
-        DcMotorEx rf = hardwareMap.get(DcMotorEx.class, "rf");
-        DcMotorEx rr = hardwareMap.get(DcMotorEx.class, "rr");
-        DcMotorEx lf = hardwareMap.get(DcMotorEx.class, "lf");
-        DcMotorEx lr = hardwareMap.get(DcMotorEx.class, "lr");
-
-        // Configure drivetrain motors to correct orientation, take note of directions
-        lf.setDirection(DcMotorSimple.Direction.REVERSE);
-        lr.setDirection(DcMotorSimple.Direction.REVERSE);
-        rf.setDirection(DcMotorSimple.Direction.FORWARD);
-        rr.setDirection(DcMotorSimple.Direction.FORWARD);
-
-        // Assign all drivetrain motors to drivetrain array, take note of indices of each motor
-        driveTrain[0] = lf;
-        driveTrain[1] = lr;
-        driveTrain[2] = rf;
-        driveTrain[3] = rr;
-
-        // Configure drivetrain motors to resist motion when zero power
-        for (int i = 0; i < 4; i++) driveTrain[i].setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        // Retrieve and initialize IMU from hardware map
-        imu = hardwareMap.get(IMU.class, "imu");
-        // Set IMU orientation based on Rev Control Hub orientation on bot
-        imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(
-                RevHubOrientationOnRobot.LogoFacingDirection.LEFT,
-                RevHubOrientationOnRobot.UsbFacingDirection.UP)));
-        imu.resetYaw();
 
         waitForStart();
 
@@ -61,9 +28,9 @@ public class AutoRedFar extends LinearOpMode {
 
         if (isStopRequested()) return;
 
-        for (int i = 0; i < 4; i++) driveTrain[i].setPower(0.67);
-        sleepy(0.35);
-        for (int i = 0; i < 4; i++) driveTrain[i].setPower(0);
+        //122,125,36.25
+
+        //131.5,137.5
     }
 
     // A homemade sleep method because the regular one is fucked

@@ -1,74 +1,125 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import android.icu.lang.UProperty;
+
+import com.pedropathing.paths.HeadingInterpolator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.BezierLine;
+import com.pedropathing.geometry.Pose;
+import com.pedropathing.paths.Path;
+import com.pedropathing.paths.PathChain;
+import com.pedropathing.util.Timer;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.vision.VisionPortal;
 
 @Autonomous
-public class AutoRedClose extends LinearOpMode {
+public class AutoRedClose extends OpMode {
 
-    // Initialize program-wide elapsed time
-    private static final ElapsedTime e = new ElapsedTime();
-
-    // Declare program-wide IMU
-    private static IMU imu;
-
-    // Initialize drivetrain motor array
-    private static DcMotorEx[] driveTrain = new DcMotorEx[4];
+    private Follower follower;
+    private Timer pathTimer, actionTimer, opmodeTimer;
+    private int pathState;
+    private final Pose startPose = new Pose(122,125,Math.toRadians(36.25));
+    private final Pose scorePose = new Pose(84,84,Math.toRadians(47.8));
+    private final Pose endPose = new Pose(127,84,0);
+    private final Pose targetPose = new Pose(133,138);
+    private Path intakeBalls;
+    private PathChain preShoot;
+    private DcMotorEx intakeMotor, outtakeMotor;
 
     @Override
-    public void runOpMode() throws InterruptedException {
+    public void init() {
+        actionTimer = new Timer();
+        opmodeTimer = new Timer();
+        opmodeTimer.resetTimer();
 
-        // Retrieve and initialize drivetrain motors from hardware map
-        DcMotorEx rf = hardwareMap.get(DcMotorEx.class, "rf");
-        DcMotorEx rr = hardwareMap.get(DcMotorEx.class, "rr");
-        DcMotorEx lf = hardwareMap.get(DcMotorEx.class, "lf");
-        DcMotorEx lr = hardwareMap.get(DcMotorEx.class, "lr");
+        follower = Constants.createFollower(hardwareMap);
+        buildPaths();
+        follower.setStartingPose(startPose);
 
-        // Configure drivetrain motors to correct orientation, take note of directions
-        lf.setDirection(DcMotorSimple.Direction.REVERSE);
-        lr.setDirection(DcMotorSimple.Direction.REVERSE);
-        rf.setDirection(DcMotorSimple.Direction.FORWARD);
-        rr.setDirection(DcMotorSimple.Direction.FORWARD);
+        DcMotorEx intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
+        DcMotorEx outtakeMotor = hardwareMap.get(DcMotorEx.class, "outtakeMotor");
 
-        // Assign all drivetrain motors to drivetrain array, take note of indices of each motor
-        driveTrain[0] = lf;
-        driveTrain[1] = lr;
-        driveTrain[2] = rf;
-        driveTrain[3] = rr;
-
-        // Configure drivetrain motors to resist motion when zero power
-        for (int i = 0; i < 4; i++) driveTrain[i].setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        // Retrieve and initialize IMU from hardware map
-        imu = hardwareMap.get(IMU.class, "imu");
-        // Set IMU orientation based on Rev Control Hub orientation on bot
-        imu.initialize(new IMU.Parameters(new RevHubOrientationOnRobot(
-                RevHubOrientationOnRobot.LogoFacingDirection.LEFT,
-                RevHubOrientationOnRobot.UsbFacingDirection.UP)));
-        imu.resetYaw();
-
-        waitForStart();
-
-        telemetry.addLine("Autonomous Ready");
-        telemetry.update();
-
-        if (isStopRequested()) return;
-
-        for (int i = 0; i < 4; i++) driveTrain[i].setPower(0.67);
-        sleepy(0.35);
-        for (int i = 0; i < 4; i++) driveTrain[i].setPower(0);
+        outtakeMotor.setDirection(DcMotorSimple.Direction.REVERSE);
+        outtakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        outtakeMotor.setVelocityPIDFCoefficients(384, 3.37, 185, 2.914);
     }
 
-    // A homemade sleep method because the regular one is fucked
-    public void sleepy(double time) {
-        e.reset();
-        while (e.seconds() < time && opModeIsActive());
+    @Override
+    public void init_loop() {}
+
+    @Override
+    public void start() {
+        opmodeTimer.resetTimer();
+        setPathState(0);
+    }
+    
+    @Override
+    public void loop() {
+        follower.update();
+        pathUpdate();
+
+        telemetry.addData("path state", pathState);
+        telemetry.addData("x", follower.getPose().getX());
+        telemetry.addData("y", follower.getPose().getY());
+        telemetry.addData("heading", follower.getPose().getHeading());
+        telemetry.update();
+    }
+    
+    @Override
+    public void stop() {}
+
+    public void buildPaths() {
+        preShoot = follower.pathBuilder()
+                .addPath(new BezierLine(startPose, scorePose))
+                .setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading(),0.8)
+                .build();
+
+        intakeBalls = new Path(new BezierLine(scorePose, endPose));
+        intakeBalls.setLinearHeadingInterpolation(scorePose.getHeading(), endPose.getHeading(), 0.25);
+    }
+
+    public void pathUpdate() {
+        switch (pathState) {
+            case 0:
+                follower.followPath(preShoot,true);
+                setPathState(1);
+                outtakeMotor.setVelocity(175, AngleUnit.DEGREES);
+                actionTimer.resetTimer();
+                break;
+            case 1:
+                double currActTime = actionTimer.getElapsedTimeSeconds();
+                if (currActTime > 10) {
+                    follower.followPath(intakeBalls);
+                    outtakeMotor.setVelocity(-90,AngleUnit.DEGREES);
+                    intakeMotor.setPower(0.65);
+                    setPathState(2);
+                    actionTimer.resetTimer();
+                }
+                else if (currActTime > 5) {
+                    intakeMotor.setPower(0.35);
+                }
+                break;
+            case 2:
+                if (!follower.isBusy() && actionTimer.getElapsedTimeSeconds() > 8) {
+                    setPathState(-1);
+                    outtakeMotor.setVelocity(0);
+                    intakeMotor.setPower(0);
+                }
+                break;
+        }
+    }
+
+    public void setPathState(int pState) {
+        pathState = pState;
+        pathTimer.resetTimer();
     }
 }
+
