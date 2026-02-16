@@ -62,7 +62,7 @@ public class TeleOpDriveTest extends LinearOpMode   {
         outtakeMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         // Set outtake motor velocity PIDF coefficients
-        outtakeMotor.setVelocityPIDFCoefficients(384, 3.37, 181, 2.914);
+        // 1.68,
 
         // initialize AprilTag
         initAprilTag();
@@ -77,6 +77,8 @@ public class TeleOpDriveTest extends LinearOpMode   {
 
         //Start TeleOp gameplay loop
         while (opModeIsActive()) {
+
+            outtakeMotor.setVelocityPIDFCoefficients(350, 3.45, 30, 1.68);
 
             // update time
             currentTime = e.seconds();
@@ -103,13 +105,13 @@ public class TeleOpDriveTest extends LinearOpMode   {
 
             // Outtake Motor finite state machine
             if (gamepad1.right_bumper && outtakeVelo < 270 && currentTime - outtakeMarker > 0.25) {
-                outtakeVelo += 3;
+                outtakeVelo += 6;
                 outtakeMotor.setVelocity(outtakeVelo, AngleUnit.DEGREES);
 
                 outtakeMarker = currentTime;
             } // bump down outtake velocity
             else if (gamepad1.left_bumper && outtakeVelo > -270 && currentTime - outtakeMarker > 0.25) {
-                outtakeVelo -= 3;
+                outtakeVelo -= 6;
                 outtakeMotor.setVelocity(outtakeVelo, AngleUnit.DEGREES);
 
                 outtakeMarker = currentTime;
@@ -120,6 +122,10 @@ public class TeleOpDriveTest extends LinearOpMode   {
 
                 automationMarker = currentTime;
             } // set outtake velocity based on regression
+            else if (gamepad1.dpad_left) {
+                outtakeVelo = 300;
+                outtakeMotor.setVelocity(outtakeVelo,AngleUnit.DEGREES);
+            }
 
             // Stop intake and outtake
             if (gamepad1.x) {
@@ -173,7 +179,7 @@ public class TeleOpDriveTest extends LinearOpMode   {
 
             // Send flywheel motor data to telemetry
             telemetry.addLine("Applied Outtake Velo: " + outtakeVelo + " deg/s");
-            telemetry.addLine("Current Outtake Velo" + outtakeMotor.getVelocity() + " tps");
+            telemetry.addLine("Current Outtake Velo" + outtakeMotor.getVelocity(AngleUnit.DEGREES) + " deg/s");
             telemetry.update();
         }
         // End of TeleOp gameplay loop
