@@ -8,8 +8,12 @@ public class TeleOpDrive extends LinearOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
+        waitForStart();
 
-        while (opModeIsActive()) {}
+        while (opModeIsActive()) {
+
+
+        }
 
     }
 }
