@@ -29,9 +29,9 @@ public class TeleOpRobotCentric extends LinearOpMode {
         // OpMode loop
         while (opModeIsActive()) {
             // Take controller inputs
-            double y = -gamepad1.left_stick_y; // Take left stick y-axis (forward/backward) reversed to correct bug
-            double x = gamepad1.left_stick_x; // Take left stick x-axis (left/right)
-            double rx = gamepad1.right_stick_x; // Take right stick x-axis (counter-clockwise/clockwise)
+            double y = gamepad1.left_stick_y; // Take left stick y-axis (forward/backward) reversed to correct bug
+            double x = -gamepad1.left_stick_x; // Take left stick x-axis (left/right)
+            double rx = -gamepad1.right_stick_x; // Take right stick x-axis (counter-clockwise/clockwise)
 
             // Maintain motor power ratio between inputs
             double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
