@@ -27,8 +27,8 @@ public class TeleOpFieldCentric extends LinearOpMode {
         rr = hardwareMap.get(DcMotorEx.class, "rr");
 
         // Correct backward motor directions
-        rf.setDirection(DcMotorSimple.Direction.REVERSE);
-        rr.setDirection(DcMotorSimple.Direction.REVERSE);
+        lf.setDirection(DcMotorSimple.Direction.REVERSE);
+        lr.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // Initialize IMU
         imu = hardwareMap.get(IMU.class, "imu");
