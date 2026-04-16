@@ -10,6 +10,7 @@ public class TeleOpRobotCentric extends LinearOpMode {
 
     // Declare drivetrain motors
     private DcMotorEx lf, lr, rf, rr;
+    private DcMotorEx intakeMotor;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -20,18 +21,20 @@ public class TeleOpRobotCentric extends LinearOpMode {
         rf = hardwareMap.get(DcMotorEx.class, "rf");
         rr = hardwareMap.get(DcMotorEx.class, "rr");
 
+        intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
+
         // Correct backward motor directions
-        rf.setDirection(DcMotorSimple.Direction.REVERSE);
-        rr.setDirection(DcMotorSimple.Direction.REVERSE);
+        lf.setDirection(DcMotorSimple.Direction.REVERSE);
+        lr.setDirection(DcMotorSimple.Direction.REVERSE);
 
         waitForStart();
 
         // OpMode loop
         while (opModeIsActive()) {
             // Take controller inputs
-            double y = gamepad1.left_stick_y; // Take left stick y-axis (forward/backward) reversed to correct bug
-            double x = -gamepad1.left_stick_x; // Take left stick x-axis (left/right)
-            double rx = -gamepad1.right_stick_x; // Take right stick x-axis (counter-clockwise/clockwise)
+            double y = -gamepad1.left_stick_y; // Take left stick y-axis (forward/backward) reversed to correct bug
+            double x = gamepad1.left_stick_x; // Take left stick x-axis (left/right)
+            double rx = gamepad1.right_stick_x; // Take right stick x-axis (counter-clockwise/clockwise)
 
             // Maintain motor power ratio between inputs
             double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
@@ -47,6 +50,13 @@ public class TeleOpRobotCentric extends LinearOpMode {
             lr.setPower(backLeftPower);
             rf.setPower(frontRightPower);
             rr.setPower(backRightPower);
+
+            if (gamepad1.dpad_down) {
+                intakeMotor.setPower(1);
+            }
+            else {
+                intakeMotor.setPower(0);
+            }
         }
     }
 }
