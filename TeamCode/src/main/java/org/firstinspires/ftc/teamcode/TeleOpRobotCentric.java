@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 @TeleOp(name="Mecanum Robot-Centric TeleOp", group="TeleOp")
 public class TeleOpRobotCentric extends LinearOpMode {
@@ -13,6 +14,14 @@ public class TeleOpRobotCentric extends LinearOpMode {
     private DcMotorEx lf, lr, rf, rr;
     private DcMotorEx intakeMotor;
     private CRServo sillyServo;
+
+    private ElapsedTime t = new ElapsedTime();
+    private boolean isToggled = false;
+
+    private boolean previousGampad = false;
+
+    private int state = 0;
+    private int totalStates = 3; // e.g., Low, Medium, High
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -35,6 +44,8 @@ public class TeleOpRobotCentric extends LinearOpMode {
 
         // OpMode loop
         while (opModeIsActive()) {
+
+
             // Take controller inputs
             double y = -gamepad1.left_stick_y; // Take left stick y-axis (forward/backward) reversed to correct bug
             double x = gamepad1.left_stick_x; // Take left stick x-axis (left/right)
@@ -55,12 +66,24 @@ public class TeleOpRobotCentric extends LinearOpMode {
             rf.setPower(frontRightPower);
             rr.setPower(backRightPower);
 
-            if (gamepad1.a) {
+            if (gamepad1.a && !previousGampad) {
+                state = (state + 1) % totalStates; ; // Switch the state
+            }
+
+            if (state == 0)
+            {
                 sillyServo.setPower(1.0);
             }
-            else {
-                sillyServo.setPower(0);
+            else if (state == 1)
+            {
+                sillyServo.setPower(-1.0);
             }
+            else if (state == 2)
+            {
+                sillyServo.setPower(0.0);
+            }
+
+            previousGampad = gamepad1.a;
         }
     }
 }
