@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
@@ -11,6 +12,7 @@ public class TeleOpRobotCentric extends LinearOpMode {
     // Declare drivetrain motors
     private DcMotorEx lf, lr, rf, rr;
     private DcMotorEx intakeMotor;
+    private CRServo sillyServo;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -22,6 +24,8 @@ public class TeleOpRobotCentric extends LinearOpMode {
         rr = hardwareMap.get(DcMotorEx.class, "rr");
 
         intakeMotor = hardwareMap.get(DcMotorEx.class, "intakeMotor");
+
+        sillyServo = hardwareMap.get(CRServo.class, "sillyServo");
 
         // Correct backward motor directions
         lf.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -51,11 +55,11 @@ public class TeleOpRobotCentric extends LinearOpMode {
             rf.setPower(frontRightPower);
             rr.setPower(backRightPower);
 
-            if (gamepad1.dpad_down) {
-                intakeMotor.setPower(1);
+            if (gamepad1.a) {
+                sillyServo.setPower(1.0);
             }
             else {
-                intakeMotor.setPower(0);
+                sillyServo.setPower(0);
             }
         }
     }
