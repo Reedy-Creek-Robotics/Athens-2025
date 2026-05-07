@@ -16,12 +16,9 @@ public class TeleOpRobotCentric extends LinearOpMode {
     private CRServo sillyServo;
 
     private ElapsedTime t = new ElapsedTime();
-    private boolean isToggled = false;
 
-    private boolean previousGampad = false;
 
-    private int state = 0;
-    private int totalStates = 3; // e.g., Low, Medium, High
+
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -39,6 +36,12 @@ public class TeleOpRobotCentric extends LinearOpMode {
         // Correct backward motor directions
         lf.setDirection(DcMotorSimple.Direction.REVERSE);
         lr.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        long FI_lastToggleTime = 250; // milliseconds
+        long FO_lastToggleTime = 250; // milliseconds
+        int DEBOUNCE_DELAY = 250;
+
+        int IntakePower = 0;
 
         waitForStart();
 
@@ -66,24 +69,18 @@ public class TeleOpRobotCentric extends LinearOpMode {
             rf.setPower(frontRightPower);
             rr.setPower(backRightPower);
 
-            if (gamepad1.a && !previousGampad) {
-                state = (state + 1) % totalStates; ; // Switch the state
+            if (gamepad1.dpad_down && (System.currentTimeMillis() - FI_lastToggleTime > DEBOUNCE_DELAY)) {
+                IntakePower = IntakePower == -1? 0: -1; // Switch the state
+                FI_lastToggleTime = System.currentTimeMillis();
             }
 
-            if (state == 0)
-            {
-                sillyServo.setPower(1.0);
-            }
-            else if (state == 1)
-            {
-                sillyServo.setPower(-1.0);
-            }
-            else if (state == 2)
-            {
-                sillyServo.setPower(0.0);
+            if (gamepad1.dpad_up && (System.currentTimeMillis() - FO_lastToggleTime > DEBOUNCE_DELAY)) {
+                IntakePower = IntakePower == 1? 0: 1;
+                FO_lastToggleTime = System.currentTimeMillis();
             }
 
-            previousGampad = gamepad1.a;
+            intakeMotor.setPower(IntakePower);
+
         }
     }
 }
